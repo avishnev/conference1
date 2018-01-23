@@ -1,0 +1,293 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>WebRTC Video-conferencing @ Alex Vishnev</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <link rel="stylesheet" href="../css/style1.css">
+        <link href='../css/jquery-silk-icons.css' rel='stylesheet' type='text/css'>
+        <link href='../css/index.css' rel='stylesheet' type='text/css'>
+        <link href="/jquery/css/ui-lightness/jquery-ui-1.10.3.custom.css" rel="stylesheet">
+        
+        <script>
+            document.createElement('article');
+        </script>
+        
+        <!-- scripts used for video-conferencing -->
+        <script src="../js/socket.io.js"> </script>
+        <script src="../js/RTCPeerConnection-v1.5.js"> </script>
+        <script src="../js/conferencew.js"> </script>
+        <script src="../js/popupmenu.js"> </script>
+        <script src="../js/build.js"> </script>
+        <script src="../js/joined.js"> </script>
+        <script src="../js/new.js"> </script>
+	<script type="text/javascript" src="../js/init.js"></script>
+	<script src="/jquery/js/jquery-1.9.1.js"></script>
+	<script src="/jquery/js/jquery-ui-1.10.3.custom.js"></script>
+	<script type="text/javascript" src="/jstree/_lib/jquery.js"></script>
+	<script type="text/javascript" src="/jstree/_lib/jquery.cookie.js"></script>
+	<script type="text/javascript" src="/jstree/_lib/jquery.hotkeys.js"></script>
+	<script type="text/javascript" src="/jstree/jquery.jstree.js"></script>
+    </head>
+
+    <body>
+        <article>
+        <section id="all">
+            <!-- just copy this <section> and next script -->
+            <section id="navs">
+	    <div id="list">
+	    </div>
+<script type="text/javascript">
+//When DOM loads
+$( document ).ready(function() {
+		$trig=0;
+		$("#list")
+		//init jstree
+		.jstree({ 
+                "core": {
+			"html_titles":true
+                },
+		"json_data" : {
+			"ajax" : {
+				"url" : "topic.php",
+				"data" : function (n) { 
+					return { id : n.attr ? n.attr("id") : 0}; 
+				}
+			}
+		},
+		"plugins" : [ "themes", "json_data", "ui" ]
+		})
+
+	.bind("reopen.jstree", function (event, data) { 
+	})
+	.bind("reselect.jstree", function (event, data) { 
+    		console.log( "reselect!" );
+	})
+	.bind("refresh.jstree", function (event, data) {
+				event.preventDefault();
+    		console.log( "refresh!" );
+	})
+	.bind("select_node.jstree", function (event, data) {
+		//added by Alex to handle Open Tree Branch
+		jstree_build();
+	      })
+});
+</script>
+	    </section>
+            <section id="experiment">                
+                <section>
+                    Room <input type="text" id="conference-name">
+                    <button id="setup-new-room" class="setup">Setup New Conference</button>
+		<!-- button to create new room -->
+                    <button id="commercial" style="visibility:hidden" class="setup" >Push Ad</button>
+		<!-- button to send/play commercial-->
+                </section>
+                
+                <table style="width: 100%;" id="rooms-list"></table>
+                <!-- local/remote videos container -->
+<!-- self view div -->
+                <div id="self">
+                    <button id="setup-new-room" style="visibility:hidden" disabled=true class="setup">Setup New Conference</button>
+		</div>
+<!-- reserve place for conference room -->
+                <div id="videos-container"></div>
+            </section>
+            <section id="ad-container">
+	    </section>
+<script>
+	init();
+		//cleanup ad space
+		function endAd() {
+			setupAd();
+		}
+		function setupAd() {
+			if (config.adPlay) {
+				config.adPlay=false;
+				var comm = document.getElementById('advertisement') ;
+				comm.style.opacity=0;
+				adContainer.removeChild(comm);
+			}
+// setup ad
+// signaling server
+// hard coded demo.webm for testing
+//in production remove
+			else
+			{
+
+				var SIGNALING_SERVER = 'http://ec2-54-211-219-3.compute-1.amazonaws.com:1336/';
+				var defaultChannel = 'video-conferencing-hangout';
+
+				var channel = defaultChannel;
+				var sender = Math.round(Math.random() * 999999999) + 999999999;
+
+				var socket = io.connect(SIGNALING_SERVER);
+				socket.emit('commercial', {
+				    channel: channel,
+				    sender: sender,
+				    data: 'demo.webm',
+				});
+			    var video = document.createElement('video');
+			    video.setAttribute('width', 300);
+			    video.src = 'demo.webm';
+			    video.id='advertisement';
+			    video.setAttribute('id', 'advertisement');
+                            video.setAttribute('remote', false);
+			    video.setAttribute('autoplay', true);
+			    video.setAttribute('controls', true);
+			    adContainer.appendChild(video);
+			     video.addEventListener('ended', endAd, false);
+			     config.adPlay=true;
+			}
+		}
+// open new room
+                function openNewRoom(name){
+                    //document.getElementById('commercial').style.visibility = "visible";
+		    config.roomName=name;
+                    captureUserMedia(function() {
+				console.log("callback function to create  room");
+                        	conferenceUI.createRoom(config); 
+                        });
+                };
+// audio/video streams to remote for conf
+                function setupNewRoomButtonClickHandler() {
+                    btnSetupNewRoom.disabled = true;
+                    document.getElementById('conference-name').disabled = true;
+                    document.getElementById('commercial').style.visibility = "visible";
+                    captureUserMedia(function() {
+                        conferenceUI.createRoom({
+                            roomName: (document.getElementById('conference-name') || { }).value || 'Anonymous'
+                        });
+                    });
+                }
+
+                function captureUserMedia(callback) {
+//self-view
+	            if (config.self_view == 0)
+		    {
+                    var video = document.createElement('video');
+                    video.setAttribute('width', 175);
+                    video.setAttribute('height', 150);
+                    video.setAttribute('autoplay', true);
+                    video.setAttribute('controls', false);
+                    video.setAttribute('remote', false);
+                    selfView.insertBefore(video, selfView.firstChild);
+		    video.id='video-self';
+                    video.setAttribute('id', 'video-self');
+
+                    getUserMedia({
+                        video: video,
+                        onsuccess: function(stream) {
+			    console.log("getUserMedia success");
+                            config.attachStream = stream;
+                            callback && callback();
+
+//otherwise there is an echo
+                            video.setAttribute('muted', true);
+                	    //scaleVideos();
+			    config.self_view = 1;
+                        },
+                        onerror: function() {
+// perm err
+                            console.log('unable to get access to your webcam');
+                            alert('unable to get access to your webcam');
+			    config.self_view = 0;
+                            callback && callback();
+                        }
+                    });
+		    }
+		else {
+			console.log("self view prev created. calling callback");
+                            callback && callback();
+		}
+                }
+//screen layout
+
+                var conferenceUI = conference(config);
+
+                /* UI specific */
+                var videosContainer = document.getElementById('videos-container') || document.body;
+                var selfView = document.getElementById('ad-container') ;
+                var adContainer = document.getElementById('ad-container') ;
+                var btnSetupNewRoom = document.getElementById('setup-new-room');
+                var btnSetupAd = document.getElementById('commercial');
+                var roomsList = document.getElementById('rooms-list');
+
+                /*if (btnSetupNewRoom) btnSetupNewRoom.onclick = setupNewRoomButtonClickHandler;
+                if (btnSetupAd) {
+			btnSetupAd.onclick = setupAd;
+			btnSetupAd.style.visibility="hidden";
+		}
+		*/
+                function rotateVideo(video) {
+                    video.style[navigator.mozGetUserMedia ? 'transform' : '-webkit-transform'] = 'rotate(0deg)';
+                    setTimeout(function() {
+                        video.style[navigator.mozGetUserMedia ? 'transform' : '-webkit-transform'] = 'rotate(360deg)';
+                    }, 1000);
+                }
+
+                (function() {
+                    var uniqueToken = document.getElementById('unique-token');
+                    if (uniqueToken)
+                        if (location.hash.length > 2) uniqueToken.parentNode.parentNode.parentNode.innerHTML = '<h2 style="text-align:center;"><a href="' + location.href + '" target="_blank">Share this link</a></h2>';
+                        else uniqueToken.innerHTML = uniqueToken.parentNode.parentNode.href = '#' + (Math.random() * new Date().getTime()).toString(36).toUpperCase().replace( /\./g , '-');
+                })();
+// format remote videos
+                function scaleVideos() {
+                    var videos = videosContainer.querySelectorAll('video'),
+                        length = videos.length, video;
+
+		    console.log("inti length ",length);
+/*
+		    var remv=0;
+		    for (i=0;i<length;i++)
+		    {
+			console.log(videos[i].getAttribute('remote'));
+			if (videos[i].getAttribute('remote') != true)
+			{
+				console.log("INCR");
+				remv++;
+				delete videos[i];
+			}
+                    }
+		    console.log("remove length ",remv);
+		    length = videos.length - remv;
+		    console.log("now length ",length);
+*/
+                    var minus = 130;
+                    var windowHeight = 700;
+                    var windowWidth = 600;
+                    var windowAspectRatio = windowWidth / windowHeight;
+                    var videoAspectRatio = 4 / 3;
+                    var blockAspectRatio;
+                    var tempVideoWidth = 0;
+                    var maxVideoWidth = 0;
+
+                    for (var i = length; i > 0; i--) {
+                        blockAspectRatio = i * videoAspectRatio / Math.ceil(length / i);
+                        if (blockAspectRatio <= windowAspectRatio) {
+                            tempVideoWidth = videoAspectRatio * windowHeight / Math.ceil(length / i);
+                        } else {
+                            tempVideoWidth = windowWidth / i;
+                        }
+                        if (tempVideoWidth > maxVideoWidth)
+                            maxVideoWidth = tempVideoWidth;
+                    }
+                    for (var i = 0; i < length; i++) {
+                        video = videos[i];
+                        if (video)
+                            video.width = maxVideoWidth - minus;
+                    }
+                }
+
+                window.onresize = scaleVideos;
+
+            </script>
+            </section>
+
+        </article>
+    
+    </body>
+</html>

@@ -1,0 +1,68 @@
+<style>
+            audio, video {
+                -moz-transition: all 1s ease;
+                -ms-transition: all 1s ease;
+                
+                -o-transition: all 1s ease;
+                -webkit-transition: all 1s ease;
+                transition: all 1s ease;
+                vertical-align: top;
+            }
+
+            input {
+                border: 1px solid #d9d9d9;
+                border-radius: 1px;
+                font-size: 2em;
+                margin: .2em;
+                width: 30%;
+            }
+
+            .setup {
+                border-bottom-left-radius: 0;
+                border-top-left-radius: 0;
+                font-size: 102%;
+                height: 47px;
+                margin-left: 2px;
+                margin-top: 8px;
+            }
+
+            p { padding: 1em; }
+
+            li {
+                border-bottom: 1px solid rgb(189, 189, 189);
+                border-left: 1px solid rgb(189, 189, 189);
+                padding: .5em;
+            }
+	ad-container {
+	width:20%;
+	margin:2em auto 2em auto;
+	}
+	#navs {
+		width:20%;
+		left: 3em;
+		border-right: 5px solid rgb(189, 189, 189);
+		height: 300px;
+	}
+
+
+	all
+	{
+		display:table;
+		width:100%;
+	}
+	all section {
+		vertical-align:top; display:table-cell; 
+	}
+	experiment {
+	   border-radius: .2em; 
+	    width: 60%;
+	border: 1px solid #d9d9d9;
+	}
+	article {
+	    background: #fff;
+	    border: 1px solid;
+	    border-color: #ddd #aaa #aaa #ddd;
+	    margin: 2.5em 0 0 0;
+	}
+</style>
+
